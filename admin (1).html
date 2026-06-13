@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — WC2026 Predictions</title>
+<meta name="theme-color" content="#0b1535">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #0a0e1a; --card: #121929; --border: rgba(255,255,255,0.09);
+    --blue: #5b9cf6; --green: #4caf7d; --red: #e05c5c;
+    --gold: #f5c842; --muted: rgba(255,255,255,0.45); --text: #e8eaf0;
+    --input-bg: rgba(255,255,255,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; }
+
+  /* Login */
+  #login-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .login-box { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 40px; width: 100%; max-width: 360px; text-align: center; }
+  .login-box h1 { font-size: 24px; margin-bottom: 6px; }
+  .login-box p { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+
+  /* App shell */
+  #app { display: none; }
+  header { background: #0d1b3e; border-bottom: 1px solid var(--border); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header span { color: var(--gold); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--card); overflow-x: auto; }
+  .tab { padding: 14px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab:hover:not(.active) { color: var(--text); }
+  .pane { display: none; padding: 24px 16px; max-width: 800px; margin: 0 auto; }
+  .pane.active { display: block; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--blue); }
+
+  /* Form elements */
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.7px; }
+  input, select { width: 100%; background: var(--input-bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.15s; }
+  input:focus, select:focus { border-color: var(--blue); }
+  select option { background: #1a2540; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .fgroup { margin-bottom: 14px; }
+
+  /* Buttons */
+  button { cursor: pointer; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; padding: 10px 18px; transition: opacity 0.15s; }
+  button:hover { opacity: 0.85; }
+  .btn-primary { background: var(--blue); color: #fff; width: 100%; padding: 12px; }
+  .btn-success { background: var(--green); color: #fff; width: 100%; padding: 12px; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-ghost { background: rgba(255,255,255,0.08); color: var(--text); }
+
+  /* Lists */
+  .list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+  .list-item:last-child { border-bottom: none; }
+  .list-item .name { font-weight: 600; }
+  .list-item .sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .badge-group    { background: rgba(91,156,246,0.15); color: var(--blue); }
+  .badge-knockout { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .badge-locked   { background: rgba(76,175,125,0.15); color: var(--green); }
+  .badge-open     { background: rgba(255,255,255,0.07); color: var(--muted); }
+
+  /* Alert / toast */
+  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--green); color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+  #toast.error { background: var(--red); }
+
+  /* Score pair */
+  .score-pair { display: grid; grid-template-columns: 1fr 24px 1fr; align-items: center; gap: 6px; }
+  .score-pair span { text-align: center; color: var(--muted); font-weight: 700; }
+
+  /* Bulk entry */
+  .bulk-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap; }
+  .bulk-row:last-child { border-bottom: none; }
+  .bulk-row .name { font-weight: 600; flex: 1 1 100px; min-width: 80px; }
+  .bulk-inputs { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .bulk-score-pair { display: flex; align-items: center; gap: 4px; }
+  .bulk-score-pair input { width: 46px; text-align: center; padding: 8px 4px; }
+  .bulk-score-pair span { color: var(--muted); font-weight: 700; }
+  .bulk-pens-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-right: 2px; }
+
+  @media (max-width: 500px) {
+    .row { grid-template-columns: 1fr; }
+    .row3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div style="font-size:36px;margin-bottom:12px">⚽</div>
+    <h1>Admin Panel</h1>
+    <p>World Cup 2026 Predictions</p>
+    <div class="fgroup"><label>Password</label><input type="password" id="pw-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')login()"></div>
+    <button class="btn-primary" onclick="login()">Sign in</button>
+    <div id="login-error" style="color:var(--red);font-size:13px;margin-top:10px;display:none">Wrong password</div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>⚽ WC2026 <span>Admin</span></h1>
+    <a id="lb-link" href="leaderboard.html" target="_blank" style="color:var(--blue);font-size:13px;text-decoration:none">View leaderboard →</a>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('players')">👥 Players</div>
+    <div class="tab" onclick="showTab('matches')">⚽ Matches</div>
+    <div class="tab" onclick="showTab('predictions')">📋 Predictions</div>
+    <div class="tab" onclick="showTab('results')">🏆 Results</div>
+  </div>
+
+  <!-- PLAYERS -->
+  <div class="pane active" id="pane-players">
+    <div class="card">
+      <h2>Add player</h2>
+      <div class="fgroup"><label>Player name</label><input id="new-player-name" placeholder="e.g. Ahmed"></div>
+      <button class="btn-primary" onclick="addPlayer()">Add Player</button>
+    </div>
+    <div class="card">
+      <h2>Players</h2>
+      <div id="player-list"><div style="color:var(--muted);font-size:14px">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- MATCHES -->
+  <div class="pane" id="pane-matches">
+    <div class="card">
+      <h2>Add match</h2>
+      <div class="fgroup">
+        <label>Stage</label>
+        <select id="new-match-stage">
+          <option value="Group">Group Stage</option>
+          <option value="Round of 32">Round of 32</option>
+          <option value="Round of 16">Round of 16</option>
+          <option value="Quarter-final">Quarter-final</option>
+          <option value="Semi-final">Semi-final</option>
+          <option value="Final">Final</option>
+        </select>
+      </div>
+      <div class="row fgroup">
+        <div><label>Team 1</label><input id="new-match-t1" placeholder="e.g. ENG"></div>
+        <div><label>Team 2</label><input id="new-match-t2" placeholder="e.g. FRA"></div>
+      </div>
+      <div class="row fgroup">
+        <div><label>Match date</label><input type="date" id="new-match-date"></div>
+        <div><label>Match time</label><input type="time" id="new-match-time"></div>
+      </div>
+      <button class="btn-primary" onclick="addMatch()">Add Match</button>
+    </div>
+    <div class="card">
+      <h2>Matches</h2>
+      <div id="match-list"><div style="color:var(--muted);font-size:14px">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- PREDICTIONS -->
+  <div class="pane" id="pane-predictions">
+    <div class="card">
+      <h2>Bulk score entry — all players for one match</h2>
+      <div class="fgroup"><label>Match</label><select id="bulk-match" onchange="renderBulkEntry()"></select></div>
+      <div id="bulk-entry-list"><div style="color:var(--muted);font-size:14px">Loading…</div></div>
+      <button class="btn-success" style="margin-top:14px" onclick="saveBulkEntry()">Save All Predictions</button>
+    </div>
+    <div class="card">
+      <h2>Add / update prediction</h2>
+      <div class="fgroup"><label>Player</label><select id="pred-player"></select></div>
+      <div class="fgroup"><label>Match</label><select id="pred-match" onchange="onMatchSelect()"></select></div>
+      <div class="fgroup">
+        <label>Predicted full-time score</label>
+        <div class="score-pair">
+          <input id="pred-ft-a" type="number" min="0" placeholder="0">
+          <span>–</span>
+          <input id="pred-ft-b" type="number" min="0" placeholder="0">
+        </div>
+      </div>
+      <div id="pred-pens-group" style="display:none">
+        <div class="fgroup">
+          <label>Predicted penalties (knockout only — leave blank if you predict a winner in FT)</label>
+          <div class="score-pair">
+            <input id="pred-pens-a" type="number" min="0" placeholder="–">
+            <span>–</span>
+            <input id="pred-pens-b" type="number" min="0" placeholder="–">
+          </div>
+        </div>
+      </div>
+      <button class="btn-success" onclick="savePrediction()">Save Prediction</button>
+    </div>
+    <div class="card">
+      <h2>Saved predictions</h2>
+      <div id="pred-list"><div style="color:var(--muted);font-size:14px">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="pane" id="pane-results">
+    <div class="card">
+      <h2>Enter match result</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Entering a result locks the match — predictions can no longer be edited.</p>
+      <div class="fgroup"><label>Match</label><select id="res-match" onchange="onResMatchSelect()"></select></div>
+      <div class="fgroup">
+        <label>Full-time score (including extra time if applicable)</label>
+        <div class="score-pair">
+          <input id="res-ft-a" type="number" min="0" placeholder="0">
+          <span>–</span>
+          <input id="res-ft-b" type="number" min="0" placeholder="0">
+        </div>
+      </div>
+      <div id="res-pens-group" style="display:none">
+        <div class="fgroup">
+          <label>Penalty shootout score (knockout only)</label>
+          <div class="score-pair">
+            <input id="res-pens-a" type="number" min="0" placeholder="–">
+            <span>–</span>
+            <input id="res-pens-b" type="number" min="0" placeholder="–">
+          </div>
+        </div>
+      </div>
+      <button class="btn-success" onclick="setResult()">Save Result & Lock Match</button>
+    </div>
+    <div class="card">
+      <h2>Locked matches</h2>
+      <div id="results-list"><div style="color:var(--muted);font-size:14px">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ⚠️  Replace with your deployed Apps Script Web App URL
+const API_URL = "https://script.google.com/macros/s/AKfycbwO2tEoAj7PiehkA_ZCUhMqzLx0LIPvLJJ_PXAzLUMvO_KqF1ZhG0MBRPVhrg8fBPcJ7w/exec";
+
+const FLAGS = {"AFG":"🇦🇫","ALB":"🇦🇱","ALG":"🇩🇿","DZA":"🇩🇿","AND":"🇦🇩","AGO":"🇦🇴","ARG":"🇦🇷","ARM":"🇦🇲","AUS":"🇦🇺","AUT":"🇦🇹","AZE":"🇦🇿","BHR":"🇧🇭","BAN":"🇧🇩","BLR":"🇧🇾","BEL":"🇧🇪","BLZ":"🇧🇿","BEN":"🇧🇯","BOL":"🇧🇴","BIH":"🇧🇦","BOT":"🇧🇼","BRA":"🇧🇷","BUL":"🇧🇬","BGR":"🇧🇬","BFA":"🇧🇫","BDI":"🇧🇮","CMR":"🇨🇲","CAN":"🇨🇦","CPV":"🇨🇻","CAF":"🇨🇫","CHD":"🇹🇩","CHI":"🇨🇱","CHL":"🇨🇱","CHN":"🇨🇳","COL":"🇨🇴","COM":"🇰🇲","CGO":"🇨🇬","COD":"🇨🇩","CRC":"🇨🇷","CRO":"🇭🇷","HRV":"🇭🇷","CUB":"🇨🇺","CYP":"🇨🇾","CZE":"🇨🇿","DEN":"🇩🇰","DNK":"🇩🇰","DJI":"🇩🇯","DOM":"🇩🇴","ECU":"🇪🇨","EGY":"🇪🇬","SLV":"🇸🇻","ENG":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","EQG":"🇬🇶","ERI":"🇪🇷","EST":"🇪🇪","ETH":"🇪🇹","FIJ":"🇫🇯","FIN":"🇫🇮","FRA":"🇫🇷","GAB":"🇬🇦","GAM":"🇬🇲","GEO":"🇬🇪","GER":"🇩🇪","DEU":"🇩🇪","GHA":"🇬🇭","GRE":"🇬🇷","GRL":"🇬🇱","GUA":"🇬🇹","GUI":"🇬🇳","GNB":"🇬🇼","GUY":"🇬🇾","HAI":"🇭🇹","HON":"🇭🇳","HUN":"🇭🇺","ISL":"🇮🇸","IND":"🇮🇳","IDN":"🇮🇩","IRN":"🇮🇷","IRQ":"🇮🇶","IRL":"🇮🇪","ISR":"🇮🇱","ITA":"🇮🇹","CIV":"🇨🇮","JAM":"🇯🇲","JPN":"🇯🇵","JOR":"🇯🇴","KAZ":"🇰🇿","KEN":"🇰🇪","PRK":"🇰🇵","KOR":"🇰🇷","KUW":"🇰🇼","KGZ":"🇰🇬","LAO":"🇱🇦","LVA":"🇱🇻","LAT":"🇱🇻","LBN":"🇱🇧","LES":"🇱🇸","LBR":"🇱🇷","LBA":"🇱🇾","LIE":"🇱🇮","LTU":"🇱🇹","LUX":"🇱🇺","MKD":"🇲🇰","MAD":"🇲🇬","MWI":"🇲🇼","MAS":"🇲🇾","MYS":"🇲🇾","MDV":"🇲🇻","MLI":"🇲🇱","MLT":"🇲🇹","MRT":"🇲🇷","MRI":"🇲🇺","MEX":"🇲🇽","MDA":"🇲🇩","MON":"🇲🇨","MNG":"🇲🇳","MNE":"🇲🇪","MAR":"🇲🇦","MOZ":"🇲🇿","MYA":"🇲🇲","NAM":"🇳🇦","NEP":"🇳🇵","NED":"🇳🇱","NZL":"🇳🇿","NCA":"🇳🇮","NIG":"🇳🇪","NGA":"🇳🇬","NIR":"🏴󠁧󠁢󠁮󠁩󠁲󠁿","NOR":"🇳🇴","OMA":"🇴🇲","PAK":"🇵🇰","PAN":"🇵🇦","PNG":"🇵🇬","PAR":"🇵🇾","PER":"🇵🇪","PHI":"🇵🇭","POL":"🇵🇱","POR":"🇵🇹","PRT":"🇵🇹","QAT":"🇶🇦","ROU":"🇷🇴","RUS":"🇷🇺","RWA":"🇷🇼","KSA":"🇸🇦","SAU":"🇸🇦","SCO":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","SEN":"🇸🇳","SRB":"🇷🇸","SLE":"🇸🇱","SVK":"🇸🇰","SVN":"🇸🇮","SOM":"🇸🇴","RSA":"🇿🇦","ZAF":"🇿🇦","SSD":"🇸🇸","ESP":"🇪🇸","SPA":"🇪🇸","SRI":"🇱🇰","SDN":"🇸🇩","SUR":"🇸🇷","SWE":"🇸🇪","SUI":"🇨🇭","CHE":"🇨🇭","SYR":"🇸🇾","TWN":"🇹🇼","TJK":"🇹🇯","TAN":"🇹🇿","THA":"🇹🇭","TLS":"🇹🇱","TOG":"🇹🇬","TRI":"🇹🇹","TUN":"🇹🇳","TUR":"🇹🇷","TKM":"🇹🇲","UGA":"🇺🇬","UKR":"🇺🇦","UAE":"🇦🇪","USA":"🇺🇸","URU":"🇺🇾","UZB":"🇺🇿","VEN":"🇻🇪","VNM":"🇻🇳","WAL":"🏴󠁧󠁢󠁷󠁬󠁳󠁿","YEM":"🇾🇪","ZAM":"🇿🇲","ZIM":"🇿🇼","ENGLAND":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","SCOTLAND":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","WALES":"🏴󠁧󠁢󠁷󠁬󠁳󠁿","NORTHERN IRELAND":"🏴󠁧󠁢󠁮󠁩󠁲󠁿","FRANCE":"🇫🇷","GERMANY":"🇩🇪","SPAIN":"🇪🇸","ITALY":"🇮🇹","PORTUGAL":"🇵🇹","NETHERLANDS":"🇳🇱","BELGIUM":"🇧🇪","CROATIA":"🇭🇷","DENMARK":"🇩🇰","SWEDEN":"🇸🇪","NORWAY":"🇳🇴","SWITZERLAND":"🇨🇭","AUSTRIA":"🇦🇹","POLAND":"🇵🇱","UKRAINE":"🇺🇦","TURKEY":"🇹🇷","RUSSIA":"🇷🇺","SERBIA":"🇷🇸","HUNGARY":"🇭🇺","CZECH REPUBLIC":"🇨🇿","CZECHIA":"🇨🇿","SLOVAKIA":"🇸🇰","ROMANIA":"🇷🇴","GREECE":"🇬🇷","FINLAND":"🇫🇮","BRAZIL":"🇧🇷","ARGENTINA":"🇦🇷","COLOMBIA":"🇨🇴","URUGUAY":"🇺🇾","CHILE":"🇨🇱","PERU":"🇵🇪","ECUADOR":"🇪🇨","VENEZUELA":"🇻🇪","PARAGUAY":"🇵🇾","BOLIVIA":"🇧🇴","UNITED STATES":"🇺🇸","CANADA":"🇨🇦","MEXICO":"🇲🇽","COSTA RICA":"🇨🇷","PANAMA":"🇵🇦","JAMAICA":"🇯🇲","HONDURAS":"🇭🇳","JAPAN":"🇯🇵","SOUTH KOREA":"🇰🇷","AUSTRALIA":"🇦🇺","IRAN":"🇮🇷","SAUDI ARABIA":"🇸🇦","QATAR":"🇶🇦","IRAQ":"🇮🇶","JORDAN":"🇯🇴","MOROCCO":"🇲🇦","EGYPT":"🇪🇬","NIGERIA":"🇳🇬","SENEGAL":"🇸🇳","GHANA":"🇬🇭","CAMEROON":"🇨🇲","SOUTH AFRICA":"🇿🇦","MALI":"🇲🇱","IVORY COAST":"🇨🇮","TUNISIA":"🇹🇳","ALGERIA":"🇩🇿","CHINA":"🇨🇳","INDIA":"🇮🇳","INDONESIA":"🇮🇩","NEW ZEALAND":"🇳🇿","VIETNAM":"🇻🇳","THAILAND":"🇹🇭"};
+function flag(name) { return FLAGS[String(name).toUpperCase().trim()] || ""; }
+function teamDisplay(name) { const f = flag(name); return f ? f + " " + esc(name) : esc(name); }
+function matchLabel(m) { return `${teamDisplay(m.team1)} vs ${teamDisplay(m.team2)}`; }
+
+let PASSWORD = "";
+let players = [], matches = [], predictions = [];
+
+// ---- AUTH ----
+function login() {
+  const pw = document.getElementById("pw-input").value;
+  if (!pw) return;
+  PASSWORD = pw;
+  // Quick test call
+  post({ action: "addPlayer", name: "__test__" }).then(r => {
+    if (r.error === "Unauthorized") {
+      document.getElementById("login-error").style.display = "block";
+      PASSWORD = "";
+    } else {
+      // Delete the test player
+      if (r.id) post({ action: "deletePlayer", id: r.id });
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      loadAll();
+    }
+  }).catch(() => {
+    document.getElementById("login-error").style.display = "block";
+    PASSWORD = "";
+  });
+}
+
+// ---- DATA ----
+async function loadAll() {
+  [players, matches, predictions] = await Promise.all([
+    get("getPlayers"), get("getMatches"), get("getPredictions")
+  ]);
+  renderPlayers(); renderMatches(); renderPredictions(); renderResults();
+  populateSelects();
+}
+
+async function get(action) {
+  const r = await fetch(API_URL + "?action=" + action);
+  return r.json();
+}
+
+async function post(data) {
+  const r = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ ...data, password: PASSWORD })
+  });
+  return r.json();
+}
+
+function toast(msg, isError) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = isError ? "error" : "";
+  t.style.opacity = "1";
+  setTimeout(() => t.style.opacity = "0", 2800);
+}
+
+// ---- PLAYERS ----
+async function addPlayer() {
+  const name = document.getElementById("new-player-name").value.trim();
+  if (!name) return toast("Enter a player name", true);
+  const r = await post({ action: "addPlayer", name });
+  if (r.ok) { toast("Player added!"); document.getElementById("new-player-name").value = ""; await loadAll(); }
+  else toast(r.error || "Error", true);
+}
+
+function renderPlayers() {
+  const el = document.getElementById("player-list");
+  if (!players.length) { el.innerHTML = '<div style="color:var(--muted);font-size:14px">No players yet</div>'; return; }
+  el.innerHTML = players.map(p => `
+    <div class="list-item">
+      <div><div class="name">${esc(p.name)}</div></div>
+      <button class="btn-sm btn-danger" onclick="delPlayer('${p.id}')">Remove</button>
+    </div>`).join("");
+}
+
+async function delPlayer(id) {
+  if (!confirm("Remove this player?")) return;
+  const r = await post({ action: "deletePlayer", id });
+  if (r.ok) { toast("Removed"); await loadAll(); }
+}
+
+// ---- MATCHES ----
+async function addMatch() {
+  const stage = document.getElementById("new-match-stage").value;
+  const team1 = document.getElementById("new-match-t1").value.trim();
+  const team2 = document.getElementById("new-match-t2").value.trim();
+  const matchDate = document.getElementById("new-match-date").value;
+  const matchTime = document.getElementById("new-match-time").value;
+  if (!team1 || !team2) return toast("Enter both teams", true);
+  const r = await post({ action: "addMatch", stage, team1, team2, matchDate, matchTime });
+  if (r.ok) {
+    toast("Match added!");
+    document.getElementById("new-match-t1").value = "";
+    document.getElementById("new-match-t2").value = "";
+    document.getElementById("new-match-date").value = "";
+    document.getElementById("new-match-time").value = "";
+    await loadAll();
+  } else toast(r.error || "Error", true);
+}
+
+function renderMatches() {
+  const el = document.getElementById("match-list");
+  const open = matches.filter(m => m.locked !== "true");
+  if (!open.length) { el.innerHTML = '<div style="color:var(--muted);font-size:14px">No open matches</div>'; return; }
+  el.innerHTML = open.map(m => `
+    <div class="list-item" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div>
+          <div class="name">${matchLabel(m)}</div>
+          <div class="sub"><span class="badge ${isKnockout(m) ? 'badge-knockout' : 'badge-group'}">${esc(m.stage)}</span></div>
+        </div>
+        <button class="btn-sm btn-danger" onclick="delMatch('${m.id}')">Remove</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
+        <div><label>Date</label><input type="date" id="match-date-${m.id}" value="${esc(m.matchDate)}"></div>
+        <div><label>Time</label><input type="time" id="match-time-${m.id}" value="${esc(m.matchTime)}"></div>
+        <button class="btn-sm btn-ghost" onclick="saveMatchSchedule('${m.id}')">Save</button>
+      </div>
+    </div>`).join("");
+}
+
+async function saveMatchSchedule(id) {
+  const matchDate = document.getElementById(`match-date-${id}`).value;
+  const matchTime = document.getElementById(`match-time-${id}`).value;
+  const r = await post({ action: "setMatchSchedule", matchId: id, matchDate, matchTime });
+  if (r.ok) { toast("Schedule saved!"); await loadAll(); }
+  else toast(r.error || "Error", true);
+}
+
+async function delMatch(id) {
+  if (!confirm("Remove this match?")) return;
+  const r = await post({ action: "deleteMatch", id });
+  if (r.ok) { toast("Removed"); await loadAll(); }
+}
+
+// ---- PREDICTIONS ----
+function populateSelects() {
+  const pp = document.getElementById("pred-player");
+  const pm = document.getElementById("pred-match");
+  const rm = document.getElementById("res-match");
+  const bm = document.getElementById("bulk-match");
+
+  pp.innerHTML = players.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  const openMatches = matches.filter(m => m.locked !== "true");
+  pm.innerHTML = openMatches.map(m => `<option value="${m.id}">${matchLabel(m)} (${esc(m.stage)})</option>`).join("");
+  rm.innerHTML = openMatches.map(m => `<option value="${m.id}">${matchLabel(m)} (${esc(m.stage)})</option>`).join("");
+
+  const prevBulkMatch = bm.value;
+  bm.innerHTML = openMatches.map(m => `<option value="${m.id}">${matchLabel(m)} (${esc(m.stage)})</option>`).join("");
+  if (prevBulkMatch && openMatches.some(m => m.id === prevBulkMatch)) bm.value = prevBulkMatch;
+
+  onMatchSelect(); onResMatchSelect(); renderBulkEntry();
+}
+
+function getSelectedMatch(selectId) {
+  const id = document.getElementById(selectId).value;
+  return matches.find(m => m.id === id);
+}
+
+function onMatchSelect() {
+  const m = getSelectedMatch("pred-match");
+  document.getElementById("pred-pens-group").style.display = m && isKnockout(m) ? "block" : "none";
+}
+
+function onResMatchSelect() {
+  const m = getSelectedMatch("res-match");
+  document.getElementById("res-pens-group").style.display = m && isKnockout(m) ? "block" : "none";
+}
+
+// ---- BULK ENTRY ----
+function renderBulkEntry() {
+  const el = document.getElementById("bulk-entry-list");
+  const matchId = document.getElementById("bulk-match").value;
+  const m = matches.find(x => x.id === matchId);
+
+  if (!m) { el.innerHTML = '<div style="color:var(--muted);font-size:14px">No open matches</div>'; return; }
+  if (!players.length) { el.innerHTML = '<div style="color:var(--muted);font-size:14px">Add players first</div>'; return; }
+
+  const ko = isKnockout(m);
+  const predMap = {};
+  predictions.filter(p => p.matchId === matchId).forEach(p => predMap[p.playerId] = p);
+
+  el.innerHTML = players.map(p => {
+    const pr = predMap[p.id] || {};
+    const ft = parseScore(pr.predFT);
+    const pens = parseScore(pr.predPens);
+    const ftA = ft ? ft.a : "", ftB = ft ? ft.b : "";
+    const pensA = pens ? pens.a : "", pensB = pens ? pens.b : "";
+
+    let pensHtml = "";
+    if (ko) {
+      pensHtml = `
+        <div class="bulk-score-pair">
+          <span class="bulk-pens-label">P</span>
+          <input type="number" min="0" placeholder="–" value="${pensA}" id="bulk-pens-a-${p.id}">
+          <span>–</span>
+          <input type="number" min="0" placeholder="–" value="${pensB}" id="bulk-pens-b-${p.id}">
+        </div>`;
+    }
+
+    return `<div class="bulk-row">
+      <div class="name">${esc(p.name)}</div>
+      <div class="bulk-inputs">
+        <div class="bulk-score-pair">
+          <input type="number" min="0" placeholder="0" value="${ftA}" id="bulk-ft-a-${p.id}">
+          <span>–</span>
+          <input type="number" min="0" placeholder="0" value="${ftB}" id="bulk-ft-b-${p.id}">
+        </div>
+        ${pensHtml}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function parseScore(s) {
+  if (!s) return null;
+  const m = String(s).trim().match(/^(\d+)\s*[-:]\s*(\d+)$/);
+  if (!m) return null;
+  return { a: m[1], b: m[2] };
+}
+
+async function saveBulkEntry() {
+  const matchId = document.getElementById("bulk-match").value;
+  const m = matches.find(x => x.id === matchId);
+  if (!m) return toast("Select a match", true);
+  const ko = isKnockout(m);
+
+  const preds = [];
+  for (const p of players) {
+    const ftA = document.getElementById(`bulk-ft-a-${p.id}`).value;
+    const ftB = document.getElementById(`bulk-ft-b-${p.id}`).value;
+    if (ftA === "" || ftB === "") continue;
+
+    let predPens = "";
+    if (ko) {
+      const pA = document.getElementById(`bulk-pens-a-${p.id}`).value;
+      const pB = document.getElementById(`bulk-pens-b-${p.id}`).value;
+      if (pA !== "" && pB !== "") predPens = pA + "-" + pB;
+    }
+
+    preds.push({ playerId: p.id, predFT: ftA + "-" + ftB, predPens });
+  }
+
+  if (!preds.length) return toast("Enter at least one score", true);
+
+  const r = await post({ action: "saveBulkPredictions", matchId, predictions: preds });
+  if (r.ok) { toast(`Saved ${r.saved} prediction${r.saved===1?"":"s"}!`); await loadAll(); }
+  else toast(r.error || "Error", true);
+}
+
+async function savePrediction() {
+  const playerId = document.getElementById("pred-player").value;
+  const matchId  = document.getElementById("pred-match").value;
+  const ftA = document.getElementById("pred-ft-a").value;
+  const ftB = document.getElementById("pred-ft-b").value;
+  if (ftA === "" || ftB === "") return toast("Enter a full-time score prediction", true);
+
+  const predFT = ftA + "-" + ftB;
+  const pA = document.getElementById("pred-pens-a").value;
+  const pB = document.getElementById("pred-pens-b").value;
+  const predPens = (pA !== "" && pB !== "") ? pA + "-" + pB : "";
+
+  const r = await post({ action: "savePrediction", playerId, matchId, predFT, predPens });
+  if (r.ok) { toast(r.updated ? "Prediction updated!" : "Prediction saved!"); await loadAll(); }
+  else toast(r.error || "Error", true);
+}
+
+function renderPredictions() {
+  const el = document.getElementById("pred-list");
+  if (!predictions.length) { el.innerHTML = '<div style="color:var(--muted);font-size:14px">No predictions yet</div>'; return; }
+
+  const playerMap = {}; players.forEach(p => playerMap[p.id] = p.name);
+  const matchMap  = {}; matches.forEach(m => matchMap[m.id] = m);
+
+  el.innerHTML = predictions.map(pr => {
+    const m = matchMap[pr.matchId];
+    if (!m) return "";
+    const penStr = pr.predPens ? ` / Pens: ${esc(pr.predPens)}` : "";
+    return `<div class="list-item">
+      <div>
+        <div class="name">${esc(playerMap[pr.playerId] || pr.playerId)}</div>
+        <div class="sub">${matchLabel(m)} — FT: ${esc(pr.predFT)}${penStr}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ---- RESULTS ----
+async function setResult() {
+  const matchId = document.getElementById("res-match").value;
+  const ftA = document.getElementById("res-ft-a").value;
+  const ftB = document.getElementById("res-ft-b").value;
+  if (ftA === "" || ftB === "") return toast("Enter the full-time score", true);
+
+  const resultFT = ftA + "-" + ftB;
+  const pA = document.getElementById("res-pens-a").value;
+  const pB = document.getElementById("res-pens-b").value;
+  const resultPens = (pA !== "" && pB !== "") ? pA + "-" + pB : "";
+
+  if (!confirm("Lock this match and save the result? This cannot be undone.")) return;
+  const r = await post({ action: "setResult", matchId, resultFT, resultPens });
+  if (r.ok) { toast("Result saved & match locked!"); await loadAll(); }
+  else toast(r.error || "Error", true);
+}
+
+function renderResults() {
+  const el = document.getElementById("results-list");
+  const locked = matches.filter(m => m.locked === "true");
+  if (!locked.length) { el.innerHTML = '<div style="color:var(--muted);font-size:14px">No results yet</div>'; return; }
+  el.innerHTML = locked.map(m => {
+    const penStr = m.resultPens ? ` (pens ${esc(m.resultPens)})` : "";
+    return `<div class="list-item">
+      <div>
+        <div class="name">${matchLabel(m)}</div>
+        <div class="sub">
+          <span class="badge badge-locked">Locked</span>
+          <span class="badge ${isKnockout(m) ? 'badge-knockout' : 'badge-group'}">${esc(m.stage)}</span>
+          FT: ${esc(m.resultFT)}${penStr}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ---- UTILS ----
+function isKnockout(m) { return m.stage.toLowerCase() !== "group"; }
+function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
+  event.currentTarget.classList.add("active");
+  document.getElementById("pane-" + name).classList.add("active");
+}
+</script>
+</body>
+</html>
